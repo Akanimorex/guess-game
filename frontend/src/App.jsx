@@ -37,7 +37,7 @@ function App() {
   const [showError, setShowError] = useState(false);
   const contractAddress="0x1f256e82f413c409bd66A58F7210C42F7F3FFadC"
 
-  const account = useAccount();
+  const {address,isConnected} = useAccount();
 
 
 
@@ -46,7 +46,7 @@ function App() {
     address: contractAddress,
     abi:abi,
     functionName:'getRandomNumber',
-    account: account.address,
+    account: address,
   });
 
   const {writeContractAsync,isPending} = useWriteContract();
@@ -59,7 +59,7 @@ function App() {
         address: contractAddress,
         abi: abi,
         functionName: "restartGame",
-        account: account.address,
+        account: address,
         args: [], 
       });
       
@@ -135,15 +135,16 @@ function App() {
           <div className="mt-4">
             <input
               type="number"
-              className="border p-2 rounded w-full"
-              placeholder="Enter your guess"
+              className={`border p-2 rounded w-full ${!isConnected ? 'bg-gray-200 cursor-not-allowed' : ''}`}              placeholder="Enter your guess"
               value={guess}
               onChange={(e) => setGuess(e.target.value)}
+              disabled={!isConnected}
             />
             <div>
             <button
-              className="bg-blue-500 text-white py-2 px-4 rounded mt-4 w-full"
+            className={`bg-blue-500 text-white py-2 px-4 rounded mt-4 w-full ${!isConnected ? 'bg-gray-400 cursor-not-allowed' : ''}`}
               onClick={handleGuess}
+              disabled={!isConnected}
               >
               Submit Guess
             </button>
@@ -151,18 +152,19 @@ function App() {
               <div className="mt-4 p-2 bg-red-100 rounded">
                 <p className="text-red-500 text-center">Incorrect guess, try again!</p>
               </div>
-            )}            <button
-              className="bg-blue-500 text-white py-2 px-4 rounded mt-4 w-full"
-              disabled={isPending}
+            )} <button
+            className={`bg-blue-500 text-white py-2 px-4 rounded mt-4 w-full ${!isConnected ? 'bg-gray-400 cursor-not-allowed' : ''}`}
+              disabled={isPending || !isConnected}
               onClick={handleRefresh}
             >
               {isPending?"Restarting...":"Restart Game"}
             </button>
 
             <button
-              className="bg-blue-500 text-white py-2 px-4 rounded mt-4 w-full"
-              onClick={handleReveal}
-            >
+            className={`bg-blue-500 text-white py-2 px-4 rounded mt-4 w-full ${!isConnected ? 'bg-gray-400 cursor-not-allowed' : ''}`}
+            onClick={handleReveal}
+              disabled={!isConnected}
+                >
               Reveal 
             </button>
 

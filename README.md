@@ -208,8 +208,17 @@ Run the following command to deploy the contract:
 npx hardhat run scripts/deploy.ts --network testnet
 ```
 
+And to verify the contract on the blockchain, run the following command:
 
-2. The contract contains two main functions:
+```
+npx hardhat verify --network testnet <CONTRACT_ADDRESS>
+```
+
+The contract is now verified, and can be visible on the Core Testnet Explorer.
+
+
+
+** The contract contains two main functions:**
    - `generateRandomNumber`: Called by the owner to generate a random number.
    -`getRandomNumber`: Called by the player to get the current random number.
    - `guessNumber`: Called by the player to submit a guess. The result is emitted via an event.
@@ -227,175 +236,379 @@ The frontend is built using **React** and **Tailwind CSS** for styling. **Rainbo
 1. Create a new React project and install dependencies:
 
    ```bash
-   npx create-react-app guess-the-number
-   cd guess-the-number
-   npm install tailwindcss wagmi rainbowkit ethers
+   
+npm create vite@latest frontend -- --template react
+   cd frontend
+   npm install 
    ```
 
-2. Set up **Tailwind CSS** by adding it to your `tailwind.config.js` file:
+2. we'd be using Tailwind CSS for styling, look up how to set it up with Vite here: [Tailwind CSS with Vite](https://tailwindcss.com/docs/guides/vite)
 
-   ```javascript
-   // tailwind.config.js
-   module.exports = {
-     content: [
-       './src/**/*.{js,jsx,ts,tsx}',
-     ],
-     theme: {
-       extend: {},
-     },
-     plugins: [],
-   };
-   ```
-
-3. Create a `App.js` file with the wallet connection and game logic.
+3. Head to `Main.jsx` where the application is mounted on. This is the  file which we would use to set up  wallet connection.
 
 ### RainbowKit & Wagmi Integration
 
 1. **Install RainbowKit** and configure it for wallet connection:
 
-   ```javascript
-   import '@rainbow-me/rainbowkit/styles.css';
-   import {
-     getDefaultWallets,
-     RainbowKitProvider,
-     darkTheme,
-   } from '@rainbow-me/rainbowkit';
-   import { configureChains, createClient, WagmiConfig } from 'wagmi';
-   import { mainnet, polygon, optimism, arbitrum } from 'wagmi/chains';
-   import { publicProvider } from 'wagmi/providers/public';
+Run the following command to install RainbowKit:
 
-   const { chains, provider } = configureChains(
-     [mainnet, polygon, optimism, arbitrum],
-     [publicProvider()]
-   );
+```
+npm init @rainbow-me/rainbowkit@latest
+```
 
-   const { connectors } = getDefaultWallets({
-     appName: 'Guess The Number DApp',
-     chains,
-   });
 
-   const wagmiClient = createClient({
-     autoConnect: true,
-     connectors,
-     provider,
-   });
+Add the following code to `Main.jsx` file:
 
-   const App = () => {
-     return (
-       <WagmiConfig client={wagmiClient}>
-         <RainbowKitProvider chains={chains} theme={darkTheme()}>
-           <div className="flex items-center justify-center h-screen bg-gray-100">
-             <Game />
-           </div>
-         </RainbowKitProvider>
-       </WagmiConfig>
-     );
-   };
 
-   export default App;
    ```
+   import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import App from './App.jsx'
+
+import '@rainbow-me/rainbowkit/styles.css';
+import {
+  getDefaultConfig,
+  RainbowKitProvider,
+} from '@rainbow-me/rainbowkit';
+import { WagmiProvider } from 'wagmi';
+import {
+  mainnet,
+  polygon,
+  optimism,
+  arbitrum,
+  base,
+  coreDao,
+} from 'wagmi/chains';
+import {
+  QueryClientProvider,
+  QueryClient,
+} from "@tanstack/react-query";
+
+
+const coreTestnet = {
+  id: 1115,
+  name: 'Core Testnet',
+  iconUrl: 'https://images.app.goo.gl/rqMHLjxM8YPaGZHT9',
+  iconBackground: '#fff',
+  nativeCurrency: { name: 'CORE', symbol: 'tCORE', decimals: 18 },
+  rpcUrls: {
+    default: { http: ['https://rpc.test.btcs.network'] },
+  },
+  blockExplorers: {
+    default: { name: 'Core Explorer', url: 'https://scan.test.btcs.network/' },
+  },
+  contracts: {
+    multicall3: {
+      address: '0xca11bde05977b3631167028862be2a173976ca11',
+      blockCreated: 11_907_934,
+    },
+  },
+};
+
+
+const config = getDefaultConfig({
+  appName: 'Core DAO Hello World',
+  projectId: <PROJECT_ID>,//your wallet connect project  ID passed in string. you could use an env for security 
+  chains: [coreDao,coreTestnet],
+  ssr: true, // If your dApp uses server side rendering (SSR)
+});
+
+
+const queryClient = new QueryClient();
+
+
+
+
+
+import './index.css'
+
+createRoot(document.getElementById('root')).render(
+<StrictMode>
+      <WagmiProvider config={config}>
+      <QueryClientProvider client={queryClient}>
+        <RainbowKitProvider  modalSize='wide'>
+          <App />
+        </RainbowKitProvider>
+      </QueryClientProvider>
+    </WagmiProvider>
+  </StrictMode>,
+)
+```
 
 ### Game Logic
 
-2. **Connect the smart contract** using ethers.js:
+2. **Connect the smart contract** using wagmi:
+
+Head to `App.jsx`
 
    ```javascript
-   import { ethers } from 'ethers';
-   import { useState } from 'react';
-   import abi from './GuessTheNumber.json';
+   import { useState, useEffect } from 'react'
+import reactLogo from './assets/react.svg'
+import viteLogo from '/vite.svg'
+import './App.css'
+import { ConnectButton } from '@rainbow-me/rainbowkit'
+import { useReadContract, useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
+import abi from './abi/abi.js'
+import Confetti from 'react-confetti'
 
-   const contractAddress = '<DEPLOYED_CONTRACT_ADDRESS>';
-   const contractABI = abi;
 
-   const Game = () => {
-     const [guess, setGuess] = useState(0);
-     const [result, setResult] = useState('');
+// Modal Component
+function Modal({ isOpen, onClose, children }) {
+  if (!isOpen) return null;
 
-     // Function to interact with the contract and submit a guess
-     const makeGuess = async () => {
-       if (!window.ethereum) return alert('Install MetaMask first!');
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+      <div className="bg-white p-6 rounded shadow-lg text-black text-2xl font-bold">
+        {children}
+        <button onClick={onClose} className="mt-4 bg-blue-500 text-white py-2 px-4 rounded">
+          Close
+        </button>
+      </div>
+    </div>
+  );
+}
 
-       try {
-         const provider = new ethers.providers.Web3Provider(window.ethereum);
-         const signer = provider.getSigner();
-         const contract = new ethers.Contract(contractAddress, contractABI, signer);
 
-         const tx = await contract.guessNumber(guess);
-         const receipt = await tx.wait();
-         
-         // Parse the event emitted from the contract
-         const event = receipt.events.find(event => event.event === 'GuessResult');
-         const success = event.args.success;
 
-         if (success) {
-           setResult('Congrats! You guessed the correct number.');
-         } else {
-           setResult('Sorry, wrong guess. Try again!');
-         }
-       } catch (err) {
-         console.error(err);
-         setResult('Transaction failed.');
-       }
-     };
 
-     return (
-       <div className="bg-white p-6 rounded-lg shadow-lg">
-         <h1 className="text-2xl font-bold mb-4">Guess The Number</h1>
-         <input
-           type="number"
-           min="1"
-           max="10"
-           value={guess}
-           onChange={(e) => setGuess(e.target.value)}
-           className="border-2 p-2 rounded mb-4"
-         />
-         <button
-           onClick={makeGuess}
-           className="bg-blue-500 text-white px-4 py-2 rounded-lg"
-         >
-           Submit Guess
-         </button>
-         <p className="mt-4">{result}</p>
-       </div>
-     );
-   };
+function App() {
+  const [guess, setGuess] = useState('');
+  const [result, setResult] = useState('');
+  const [reveal, setReveal] = useState(false);
+  const [txHash, setTxHash] = useState('');
+  const [celebrate, setCelebrate] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showError, setShowError] = useState(false);
+  const contractAddress= <CONTRACT_ADDRESS>
 
-   export default Game;
+  const {address,isConnected} = useAccount();
+
+
+
+  
+  const {data:randomNumber,isSuccess,error} = useReadContract({
+    address: contractAddress,
+    abi:abi,
+    functionName:'getRandomNumber',
+    account: address,
+  });
+
+  const {writeContractAsync,isPending} = useWriteContract();
+
+
+  const handleRefresh = async () => {
+    try {
+      
+      const tx = await writeContractAsync({
+        address: contractAddress,
+        abi: abi,
+        functionName: "restartGame",
+        account: address,
+        args: [], 
+      });
+      
+      console.log("tx happening::",tx);
+      setTxHash(tx); 
+    } catch (err) {
+      console.error("Error creating invoice:", err);
+    }
+  };
+
+
+  const { isLoading: isConfirming, isSuccess: isConfirmed } =
+  useWaitForTransactionReceipt({
+    hash: txHash,
+  });
+
+
+
+  useEffect(()=>{
+    if(isConfirmed){
+      console.log("transaction confirmed")
+    }
+  },[isConfirmed])
+
+  
+
+  useEffect(()=>{
+    if(isSuccess){
+      console.log(randomNumber,"call success")
+      setResult(randomNumber)
+    }else if (error){
+      console.log(error,"error")
+    }
+  },[isSuccess,error,randomNumber])
+
+ 
+
+  const handleGuess = () => {
+    if(guess == result){
+      console.log("Correct guess!!!");
+      setCelebrate(true);
+      setIsModalOpen(true);
+    }else{
+
+      console.log("try again next time");
+      setCelebrate(false);
+      setShowError(true);
+    }
+  }
+
+  const handleReveal = () => {
+    setReveal(true)
+  }
+       
+
+  return (
+    <>
+    {celebrate && <Confetti />}
+    <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
+        <h2 className="text-2xl font-bold">Congratulations!</h2>
+        <p>You guessed the correct number!</p>
+    </Modal>
+    <div className='h-screen w-full'>
+      <div className='flex justify-between'>
+        <h1>GUESS</h1>
+        <ConnectButton />
+      </div>
+
+      <div className="min-h-screen flex items-center justify-center ">
+        <div className="bg-black p-6 rounded-lg shadow-lg">
+          <h1 className="text-2xl font-bold mb-4 text-center">Guess the Number!</h1>
+
+          <div className="mt-4">
+            <input
+              type="number"
+              className={`border p-2 rounded w-full ${!isConnected ? 'bg-gray-200 cursor-not-allowed' : ''}`}              placeholder="Enter your guess"
+              value={guess}
+              onChange={(e) => setGuess(e.target.value)}
+              disabled={!isConnected}
+            />
+            <div>
+            <button
+            className={`bg-blue-500 text-white py-2 px-4 rounded mt-4 w-full ${!isConnected ? 'bg-gray-400 cursor-not-allowed' : ''}`}
+              onClick={handleGuess}
+              disabled={!isConnected}
+              >
+              Submit Guess
+            </button>
+            {showError && (
+              <div className="mt-4 p-2 bg-red-100 rounded">
+                <p className="text-red-500 text-center">Incorrect guess, try again!</p>
+              </div>
+            )} <button
+            className={`bg-blue-500 text-white py-2 px-4 rounded mt-4 w-full ${!isConnected ? 'bg-gray-400 cursor-not-allowed' : ''}`}
+              disabled={isPending || !isConnected}
+              onClick={handleRefresh}
+            >
+              {isPending?"Restarting...":"Restart Game"}
+            </button>
+
+            <button
+            className={`bg-blue-500 text-white py-2 px-4 rounded mt-4 w-full ${!isConnected ? 'bg-gray-400 cursor-not-allowed' : ''}`}
+            onClick={handleReveal}
+              disabled={!isConnected}
+                >
+              Reveal 
+            </button>
+
+            </div>
+          </div>
+
+          {result && (
+            <div className="mt-4 p-2 bg-gray-100 rounded">
+              <p className='text-center text-2xl font-bold text-black '>
+                {reveal ? result.toString() : '???' }
+                </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+    </>
+  )
+}
+
+export default App
+
    ```
 
 ---
 
-## Deploying on Core Chain
+Install the following dependencies:
+```
+npm install react-confetti
+```
 
-### Smart Contract Deployment
+Make sure to replace the `<CONTRACT_ADDRESS>` with the address of the deployed contract , `<PROJECT_ID>` with your wallet connect project ID and the abi too should be updated with the correct one.
 
-1. **Compile and deploy** the smart contract using tools like **Remix IDE**, **Hardhat**, or **Truffle**.
-2. Make sure to set the correct network in the config and get the contract address after deployment.
 
 ### Frontend Deployment
 
 1. For deploying the frontend, you can use hosting platforms like **Vercel**, **Netlify**, or your preferred service.
 2. Ensure that the deployed contract address is correctly inserted in the frontend.
+3. You can access the DApp via the link provided by the hosting platform.
 
 ---
 
-## Running the DApp
+## Hosting the DApp on Telgram as a mini app
 
-1. **Clone the repository**:
-   ```bash
-   git clone <repository_url>
-   cd guess-the-number
+1. Search for BotFather on Telegram and create a new bot by sending the `/newbot` command.
+
+2. Follow the instructions to set up your bot, which includes creating a username for your bot, etc. Once completely done, your bot will be created, and you will receive a token which you'll need to paste in the `.env` file.
+
+
+   
+
+## Prerequisites
+- A Telegram account
+- A hosted web application with a URL
+- Basic knowledge of interacting with APIs
+
+## Step 1: Create a Telegram Bot
+
+1. Open Telegram and search for **BotFather**.
+2. Start a chat with BotFather and type the following command:  
    ```
-
-2. **Install dependencies**:
-   ```bash
-   npm install
+   /newbot
    ```
+3. Follow the prompts to:
+   - Choose a **name** for your bot (e.g., `corebot`).
+   - Select a **unique username** for your bot (ending in `bot`, e.g., `corebot_bot`).
+4. After the bot is created, BotFather will provide you with an **API token**. This token allows you to interact with your bot via the Telegram HTTP API.
 
-3. **Run the development server**:
-   ```bash
-   npm start
+## Step 2: Create a Mini App
+
+1. In the BotFather chat, type the following command:  
    ```
+   /newApp
+   ```
+2. When prompted, select the bot you just created.
+3. Provide a description for your mini app.
+4. Upload an image for your mini app (required dimensions: **640x360 pixels**).
+5. When prompted to link your web app, paste the URL of your hosted web app.
+6. Set a **short name** for the URL to make it easier for users to access.
 
-4. **Access the DApp** via your local environment at `http://localhost:3000`, connect your wallet, and start guessing the number!
+## Step 3: Finalize and Launch
+
+1. Your mini app is now linked to your Telegram bot.
+
+2. You can access the mini app:
+   - Directly within Telegram by interacting with your bot.
+   - In a web browser using the provided link.
+
+3. Test the integration by:
+   - Interacting with your bot in Telegram.
+   - Accessing your web app through the Telegram mini app interface.
+
+## 🎉 Congratulations!
+You've successfully deployed your web app as a mini app on Telegram! Users can now share the link in-app, and you can enhance the experience by transforming it into a mini-game or adding further functionalities.
+
+--- 
+
+### Notes:
+- For detailed API documentation and further customizations, refer to the [Telegram Bot API documentation](https://core.telegram.org/bots/api).
+- Ensure that your web app is mobile-friendly to provide a seamless user experience inside Telegram.
+
+
 

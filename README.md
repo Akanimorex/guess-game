@@ -90,7 +90,7 @@ contract GuessTheNumber {
 ### Steps to Implement:
 
 1. **Deploy the contract** on the Core Testnet 
-2. Go to the hardhat.config.ts file and passte the following config.
+2. Go to the `hardhat.config.ts` file and paste the following config.
 ```
     import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";

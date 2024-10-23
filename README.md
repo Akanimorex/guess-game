@@ -18,7 +18,7 @@ A decentralized application (DApp) that generates a random number between 1 and 
    - Frontend Deployment
 4. [Running the DApp](#running-the-dapp)
 
-5. [Deploying on Core Chain](#deploying-on-core-chain)
+5. [Hosting on Telegram as a Mini App](#deploying-on-core-chain)
 
 ---
 
@@ -600,6 +600,10 @@ Make sure to replace the `<CONTRACT_ADDRESS>` with the address of the deployed c
 3. Test the integration by:
    - Interacting with your bot in Telegram.
    - Accessing your web app through the Telegram mini app interface.
+
+It should look like this when clicked:
+![alt text](image.png)
+
 
 ## 🎉 Congratulations!
 You've successfully deployed your web app as a mini app on Telegram! Users can now share the link in-app, and you can enhance the experience by transforming it into a mini-game or adding further functionalities.

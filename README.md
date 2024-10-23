@@ -601,6 +601,10 @@ Make sure to replace the `<CONTRACT_ADDRESS>` with the address of the deployed c
    - Interacting with your bot in Telegram.
    - Accessing your web app through the Telegram mini app interface.
 
+It should look like this when clicked:
+![alt text](image.png)
+
+
 ## 🎉 Congratulations!
 You've successfully deployed your web app as a mini app on Telegram! Users can now share the link in-app, and you can enhance the experience by transforming it into a mini-game or adding further functionalities.
 

@@ -18,7 +18,7 @@ A decentralized application (DApp) that generates a random number between 1 and 
    - Frontend Deployment
 4. [Running the DApp](#running-the-dapp)
 
-5. [Deploying on Core Chain](#deploying-on-core-chain)
+5. [Hosting on Telegram as a Mini App](#deploying-on-core-chain)
 
 ---
 

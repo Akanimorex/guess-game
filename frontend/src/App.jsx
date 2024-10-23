@@ -124,7 +124,7 @@ function App() {
     </Modal>
     <div className='h-screen w-full'>
       <div className='flex justify-between'>
-        <h1>GUESS</h1>
+        <h3>GUESS</h3>
         <ConnectButton />
       </div>
 

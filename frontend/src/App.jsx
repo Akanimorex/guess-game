@@ -150,7 +150,7 @@ function App() {
     <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
         <h2 className="text-2xl font-bold">Congratulations!</h2>
         <p>You guessed the correct number! You can claim your reward.</p>
-        <button className='bg-blue-500 text-white py-2 px-4 rounded mt-4  w-1/2' onClick={handleClaimToken}>{isPending?"Claiming...":"Claim 1 GSS token"}</button>
+        <button className='bg-blue-500 text-white py-1 px-2 rounded mt-4  w-1/2' onClick={handleClaimToken}>{isPending?"Claiming...":"Claim 1 GSS token"}</button>
     </Modal>
     <div className='h-screen w-full'>
       <ToastContainer/>

@@ -1,9 +1,26 @@
-import { HardhatUserConfig } from "hardhat/config";
+// import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 import * as dotenv from 'dotenv';
 dotenv.config();
 
 
+
+
+
+// const ACCOUNT_PRIVATE_KEY = process.env.PRIVATE_KEY;
+
+// module.exports = {
+//   solidity: "0.8.20",
+//   networks: {
+//     hardhat: {
+//       forking: {
+//         url: "https://rpc.test.btcs.network",
+//       }
+//     }
+//   },
+//   lockGasLimit: 200000000000,
+//   gasPrice: 10000000000,
+// };
 
 
 
@@ -52,7 +69,7 @@ module.exports = {
  solidity: {
   compilers: [
     {
-       version: '0.8.19',
+       version: '0.8.20',
        settings: {
           evmVersion: 'paris',
           optimizer: {

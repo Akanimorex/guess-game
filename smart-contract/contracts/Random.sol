@@ -1,17 +1,27 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract GuessTheNumber {
     address public owner;
     uint256 private randomNumber;
     bool public isGameActive;
+    IERC20 public tCoreToken;
     
     event GameResult(bool win, uint256 guessedNumber, uint256 correctNumber);
     
-    constructor() {
+    constructor(address _tCoreTokenAddress) {
         owner = msg.sender;
         isGameActive = true;
         generateRandomNumber();
+        tCoreToken = IERC20(_tCoreTokenAddress);
+    }
+
+
+    function claimTokens() public {
+        uint256 amount = 1 * 10 ** 18; // 1 tCore token (assuming 18 decimals)
+        require(tCoreToken.balanceOf(address(this)) >= amount, "Not enough tokens in the contract");
+        tCoreToken.transfer(msg.sender, amount);
     }
 
     // Function to generate a pseudo-random number between 1 and 10

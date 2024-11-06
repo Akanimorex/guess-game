@@ -9,7 +9,6 @@ import Confetti from 'react-confetti'
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-
 // Modal Component
 function Modal({ isOpen, onClose, children }) {
   if (!isOpen) return null;
@@ -31,37 +30,39 @@ function Modal({ isOpen, onClose, children }) {
   );
 }
 
-
-
-
 function App() {
-  const [guess, setGuess] = useState('');
-  const [result, setResult] = useState('');
-  const [reveal, setReveal] = useState(false);
-  const [txHash, setTxHash] = useState('');
-  const [celebrate, setCelebrate] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [showError, setShowError] = useState(false);
-  const contractAddress="0x7DfB4C470477CF665AaD2E0E32d905dEAb0cf206"
+  // State variables
+  const [guess, setGuess] = useState(''); // User's guess
+  const [result, setResult] = useState(''); // Random number result
+  const [reveal, setReveal] = useState(false); // Reveal the number
+  const [txHash, setTxHash] = useState(''); // Transaction hash
+  const [celebrate, setCelebrate] = useState(false); // Celebration state
+  const [isModalOpen, setIsModalOpen] = useState(false); // Modal open state
+  const [showError, setShowError] = useState(false); // Error display state
+  const contractAddress="0x7DfB4C470477CF665AaD2E0E32d905dEAb0cf206"; // Contract address
+  const [hasClaimed,setHasClaimed] = useState(false); // Claim state
 
-  const {address,isConnected} = useAccount();
+  const {address,isConnected} = useAccount(); // User account info
 
+  // Read contract data incase you want to use the blockchain for random generation
+  // const {data:randomNumber,isSuccess,error} = useReadContract({
+  //   address: contractAddress,
+  //   abi:abi,
+  //   functionName:'getRandomNumber',
+  //   account: address,
+  // });
 
-
-  
-  const {data:randomNumber,isSuccess,error} = useReadContract({
-    address: contractAddress,
-    abi:abi,
-    functionName:'getRandomNumber',
-    account: address,
-  });
-
+  // Write contract data
   const {writeContractAsync,isPending} = useWriteContract();
 
+  // Handle token claim
   const handleClaimToken = async () => {
-      try {
-
-        const tx = await writeContractAsync({
+    if (hasClaimed) {
+      toast("You have already claimed your reward.");
+      return;
+    }
+    try {
+      const tx = await writeContractAsync({
         address: contractAddress,
         abi: abi,
         functionName: "claimTokens",
@@ -70,61 +71,47 @@ function App() {
       });
       console.log("tx happening::",tx);
       setTxHash(tx); 
-
-  } catch (err) {
-    console.error("Error claiming token:", err);
-  }
+    } catch (err) {
+      console.error("Error claiming token:", err);
+    }
   } 
 
-
-  const handleRefresh = async () => {
-    try {
-      
-      const tx = await writeContractAsync({
-        address: contractAddress,
-        abi: abi,
-        functionName: "restartGame",
-        account: address,
-        args: [], 
-      });
-      
-      console.log("tx happening::",tx);
-      setTxHash(tx); 
-    } catch (err) {
-      console.error("Error refreshing game:", err);
-    }
+  // Restart the game
+  const handleRestartGame = async () => {
+    generateRandomNumber();
+    setCelebrate(false);
+    setShowError(false);
+    setReveal(false);
+    setIsModalOpen(false);
+    setGuess('');
   };
 
-
+  // Wait for transaction receipt
   const { isLoading: isConfirming, isSuccess: isConfirmed } =
   useWaitForTransactionReceipt({
     hash: txHash,
   });
 
-
-
-
-//notify user when token is claimed
+  // Notify user when token is claimed
   useEffect(()=>{
     if(isConfirmed){
       toast("Successfully claimed 1 GSS token")
-      setIsModalOpen(false)
+      setIsModalOpen(false);
+      setHasClaimed(true);
     }
   },[isConfirmed])
 
-  
+  // Generate random number on mount
+  const generateRandomNumber = () => {
+    let num = parseInt(Math.random() * 10 + 1);
+    setResult(num);
+  }
 
   useEffect(()=>{
-    if(isSuccess){
-      console.log(randomNumber,"call success")
-      setResult(randomNumber)
-    }else if (error){
-      console.log(error,"error")
-    }
-  },[isSuccess,error,randomNumber])
+    generateRandomNumber();
+  },[])
 
-  // console.log(randomNumber,"result")
-
+  // Handle user's guess
   const handleGuess = () => {
     if(guess == result){
       console.log("Correct guess!!!");
@@ -132,18 +119,17 @@ function App() {
       setCelebrate(true);
       setIsModalOpen(true);
     }else{
-
       console.log("try again next time");
       setCelebrate(false);
       setShowError(true);
     }
   }
 
+  // Reveal the number
   const handleReveal = () => {
     setReveal(true)
   }
        
-
   return (
     <>
     {celebrate && <Confetti />}
@@ -166,7 +152,8 @@ function App() {
           <div className="mt-4">
             <input
               type="number"
-              className={`border p-2 rounded w-full ${!isConnected ? 'bg-gray-200 cursor-not-allowed' : ''}`}              placeholder="Enter your guess"
+              className={`border p-2 rounded w-full ${!isConnected ? 'bg-gray-200 cursor-not-allowed' : ''}`}              
+              placeholder="Enter your guess"
               value={guess}
               onChange={(e) => setGuess(e.target.value)}
               disabled={!isConnected}
@@ -184,13 +171,13 @@ function App() {
                 <p className="text-red-500 text-center">Incorrect guess, try again!</p>
               </div>
             )}
-            {/* <button
+            <button
             className={`bg-blue-500 text-white py-2 px-4 rounded mt-4 w-full ${!isConnected ? 'bg-gray-400 cursor-not-allowed' : ''}`}
               disabled={isPending || !isConnected}
-              onClick={handleRefresh}
+              onClick={handleRestartGame}
             >
-              {isPending?"Restarting...":"Restart Game"}
-            </button> */}
+              Restart Game
+            </button>
 
             <button
             className={`bg-blue-500 text-white py-2 px-4 rounded mt-4 w-full ${!isConnected ? 'bg-gray-400 cursor-not-allowed' : ''}`}
